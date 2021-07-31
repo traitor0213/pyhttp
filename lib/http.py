@@ -1,6 +1,6 @@
 import socket
 import select
-from typing import Callable
+from typing import Callable, Tuple
 
 def createHttpBuffer(headerList:list=[("connection", "close")], content:bytes=None) -> bytearray:
     headerBuffer = ""
@@ -43,9 +43,7 @@ class serverObject():
         else:
             return None
 
-def readHttpMessage(readSocket: socket.socket):
-    HttpMessage: bytes 
-
+def readHttpMessage(readSocket: socket.socket) -> tuple[str, bytes, str]:
     httpHeader = ""
     while "\r\n\r\n" not in httpHeader:
         try:
@@ -56,25 +54,23 @@ def readHttpMessage(readSocket: socket.socket):
     _httpHeader = httpHeader.lower()
     _httpHeader = _httpHeader.replace(" ", "")
 
-    HttpMessage = httpHeader.encode()
-
     if "content-length:" in _httpHeader:
         contentLength = int(_httpHeader.split("content-length:")[1])
         if contentLength > 0:
             httpBody = readSocket.recv(contentLength)
 
-            HttpMessage += httpBody
-    
-    return HttpMessage
+            return (httpHeader.split("\r\n")[0], httpBody, httpHeader)
 
-def httpServer(callback: Callable[[bytes], bytes], address: str = "", port: int = 80, backlog: int = 256, reverse: bool =False) -> socket.socket:
+    return (httpHeader.split("\r\n")[0], None, httpHeader)
+
+def httpServer(callback: Callable[[str, bytes, str], bytes], address: str = "", port: int = 80, backlog: int = 256, reverse: bool =False) -> socket.socket:
     server = serverObject()
     
     while True:
         clientSocket = server.accept()
         if clientSocket != None:
-            clientMessage = readHttpMessage(clientSocket)
-            clientSocket.send(callback(clientMessage))
+            (clientMethods, clientBody, clientHeader) = readHttpMessage(clientSocket)
+            clientSocket.send(callback(clientMethods, clientBody, clientHeader))
 
             clientSocket.shutdown(socket.SHUT_RDWR)
             clientSocket.close()

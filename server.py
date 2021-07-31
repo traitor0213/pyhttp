@@ -1,14 +1,18 @@
 from lib.http import *
-import socket
+from urllib.parse import unquote
 
-def serverIORoutine(clientMessage: bytes):
-    body = "hello, world"
+
+def serverIORoutine(methods: str, body: bytes, header: str):
+    path = methods.split(" ")[1]
+    path = unquote(path)
+    
+    body = path
     headerList = [
         ("content-type", "text"),
         ("connection", "close"),
         ("content-length", str(len(body)))
     ]
-    
+
     httpResponseMessage = "HTTP/1.1 200 OK".encode() + createHttpBuffer(headerList, body.encode())
 
     return httpResponseMessage
