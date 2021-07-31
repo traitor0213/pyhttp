@@ -26,6 +26,37 @@ def createHttpBuffer(headerList:list=[("connection", "close")], content:bytes=No
 
     return headerBuffer
 
+
+def setHttpResponseMessage(status: str, headerList: list, body: bytes):
+    return ("HTTP/1.1 " + status).encode() + createHttpBuffer(headerList, body.encode())
+
+def getHttpRequestQuery(requestPathQuery: str) -> list[dict]:
+    queryList = []
+
+    startOfQuery = 0
+    for requestPathChar in requestPathQuery:
+        startOfQuery += 1
+
+        if requestPathChar == "?":
+            break  
+        
+    query = ""
+    while True:
+        if requestPathQuery[startOfQuery] != "&":
+            query += requestPathQuery[startOfQuery]
+        
+        if requestPathQuery[startOfQuery] == "&":
+            queryList.append({"query": query.split("=")[0], "value": query.split("=")[1]})
+            query = ""
+
+        startOfQuery += 1
+
+        if startOfQuery == len(requestPathQuery):
+            queryList.append({"query": query.split("=")[0], "value": query.split("=")[1]})
+            break 
+
+    return queryList
+
 class serverObject():
     def __init__(self, port: int = 80, backlog: int = 256) -> None:
         self.serverSocket: socket.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -55,7 +86,7 @@ def readHttpMessage(readSocket: socket.socket) -> tuple[str, bytes, str]:
     _httpHeader = _httpHeader.replace(" ", "")
 
     if "content-length:" in _httpHeader:
-        contentLength = int(_httpHeader.split("content-length:")[1])
+        contentLength = int(_httpHeader.split("content-length:")[1].split("\r\n")[0])
         if contentLength > 0:
             httpBody = readSocket.recv(contentLength)
 
