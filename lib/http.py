@@ -22,13 +22,17 @@ def createHttpBuffer(headerList:list=[("connection", "close")], content:bytes=No
     headerBuffer += "\r\n"
 
     headerBuffer = headerBuffer.encode()
-    headerBuffer += content
+    if type(content) == str:
+        content: str
+        headerBuffer += content.encode()
+    else:
+        headerBuffer += content
 
     return headerBuffer
 
 
 def setHttpResponseMessage(status: str, headerList: list, body: bytes):
-    return ("HTTP/1.1 " + status).encode() + createHttpBuffer(headerList, body.encode())
+    return ("HTTP/1.1 " + status).encode() + createHttpBuffer(headerList, body)
 
 def getHttpRequestQuery(requestPathQuery: str) -> list[dict]:
     queryList = []
@@ -42,6 +46,9 @@ def getHttpRequestQuery(requestPathQuery: str) -> list[dict]:
         
     query = ""
     while True:
+        if startOfQuery >= len(requestPathQuery):
+            break 
+
         if requestPathQuery[startOfQuery] != "&":
             query += requestPathQuery[startOfQuery]
         
@@ -51,7 +58,7 @@ def getHttpRequestQuery(requestPathQuery: str) -> list[dict]:
 
         startOfQuery += 1
 
-        if startOfQuery == len(requestPathQuery):
+        if startOfQuery >= len(requestPathQuery):
             queryList.append({"query": query.split("=")[0], "value": query.split("=")[1]})
             break 
 
